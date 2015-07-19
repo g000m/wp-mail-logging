@@ -313,11 +313,23 @@ class Email_Logging_ListTable extends WP_List_Table {
 	 */
 	function get_bulk_actions() {
 		$actions = array(
-			'delete'    => 'Delete'
+			'delete'    => 'Delete',
+			'resend'	=> 'Resend'
 		);
 		return $actions;
 	}
-	
+
+    /**
+     * @param $logged_emails
+     */
+    function resend_email($logged_emails) {
+        $email_errors = 0;
+        foreach ( $logged_emails as $an_email ) {
+            $email_result = wp_mail( $an_email->receiver, $an_email->subject, $an_email->message, $an_email->headers, $an_email->attachments ) ;
+            if ( $email_result == 0) { $email_errors++; }
+        }
+    }
+
 	function process_bulk_action() {
 		global $wpdb;
 		$name = $this->_args['singular'];
@@ -329,8 +341,17 @@ class Email_Logging_ListTable extends WP_List_Table {
 				$wpdb->query( $wpdb->prepare("DELETE FROM `$tableName` WHERE `mail_id` = %d", $item_id) );
 			}
 		}
+        else if ( 'resend' == $this->current_action() ) {
+
+            //foreach( $_REQUEST[$name] as $item_id ) {
+                //$resend = $wpdb->query( $wpdb->prepare("SELECT * FROM `$tableName` WHERE `mail_id` = %d", $item_id) );
+                $resend =  $wpdb->get_results("SELECT * FROM `$tableName` WHERE `mail_id` IN (" . implode(',', $_REQUEST[$name] ) .")" ) ;
+                $this->resend_email($resend);
+            //}
+        }
 	}
-	
+
+
 	/**
 	 * Render the cb column
 	 * @since 1.0
